@@ -60,6 +60,10 @@ module monitor_interface(
 	input [7:0] data_in,
 	output [7:0] data_out,
 	output data_oe_x,
+	output video_oe_x,
+	output rgb_comp_x,
+	output int_ext_x,
+	output hd_sd_x,
 	input clk_20mhz
 );
 
@@ -68,6 +72,7 @@ reg irq_oe;
 reg irq;
 reg selected;
 reg in_irq;
+reg video_oe;
 
 reg [1:0] addr_bytes;
 reg [7:0] cmd_in;
@@ -82,15 +87,39 @@ localparam [3:0]
 	 s_cmd		= 'd02,
 	 s_sync		= 'd03,
 	 s_blip		= 'd04,
-	 s_prepare	= 'd05;
+	 s_prepare	= 'd05,
+	 s_video		= 'd05;
 
 localparam [2:0]
 	cs_addr		= 'd01,
 	cs_data		= 'd02;
 
+// video formats (10 31 xx)
+localparam [2:0]
+	vf_no_signal	= 'h00,
+	vf_576i_50hz	= 'h01,
+	vf_480i_60hz	= 'h02,
+	vf_480p_60hz	= 'h04;
+
 localparam [2:0]
 	prep_reg			= 'd01,
 	prep_data		= 'd02;
+
+localparam [2:0]
+	v_reg				= 'd01,
+	v_data			= 'd02;
+
+localparam [7:0]
+	vreg_colorspc	= 'h00,
+	vreg_video_oe	= 'h10,
+	vreg_format		= 'h31;
+	
+localparam [7:0]
+	video_out_dis	= 'h01,
+	video_oe_ext	= 'h08,
+	video_oe_int	= 'h09,
+	video_rgb		= 'h00,
+	video_ypbpr		= 'h04;
 
 localparam [7:0]
 	cmd_irq		= 'h02,
@@ -104,11 +133,14 @@ localparam [7:0]
 	
 reg [3:0] state;
 reg [3:0] c_state;
+reg [3:0] v_state;
+
+reg [7:0] reg_video;
 
 reg [3:0] p_state;
 reg [7:0] reg_prepare;
-reg [7:0] prep_reg27_09_reads [0:4];
-reg [7:0] prep_reg27_03_reads [0:4];
+reg [7:0] prep_reg27_09_reads [0:7];
+reg [7:0] prep_reg27_03_reads [0:7];
 reg [7:0] reg_22_27_read_cnt;
 reg [3:0] prepare_cnt;
 
@@ -123,12 +155,20 @@ reg [7:0] reg_22_22;
 reg [7:0] reg_22_24;
 reg [7:0] reg_22_27;
 
+reg [7:0] reg_video_format;
+
+reg video_rgb_ypbpr_x;
+reg video_int_ext_x;
+
 assign int_oe_x = irq_oe;
 assign int_x = irq;
 //assign data_out = (selected && ((c_state != cs_data)) ? 'hFF : out_data);
 assign data_out = out_data;
 //assign data_oe_x = !(r_wx && ax_d && reset_x && (state != s_undef && irq_oe));
 assign data_oe_x = !(data_oe && r_wx && ax_d && reset_x);
+assign video_oe_x = video_oe;
+assign rgb_comp_x = video_rgb_ypbpr_x;
+assign int_ext_x = video_int_ext_x;
 
 //always @ (posedge clk_rw, negedge reset_x) begin
 always @ (clk_rw, negedge reset_x) begin
@@ -143,7 +183,12 @@ always @ (clk_rw, negedge reset_x) begin
 		out_data		<= 'hFF;
 		state			<= s_undef;
 		c_state		<= cs_addr;
+		v_state		<= v_reg;
 		reg_addr		<= 16'h00;
+		video_oe		<= 'b0;
+		reg_video_format <= vf_no_signal;
+		video_rgb_ypbpr_x <= 'b0;
+		video_int_ext_x <= 'b0;
 
 		reg_serial[0] 	<= 'h32;
 		reg_serial[1] 	<= 'h30;
@@ -157,16 +202,22 @@ always @ (clk_rw, negedge reset_x) begin
 		p_state		<= prep_reg;
 
 		prep_reg27_09_reads[0] <= 'd13;
-		prep_reg27_09_reads[1] <= 'd13;
-		prep_reg27_09_reads[2] <= 'd04;
-		prep_reg27_09_reads[3] <= 'd12;
+		prep_reg27_09_reads[1] <= 'd14;
+		prep_reg27_09_reads[2] <= 'd05;
+		prep_reg27_09_reads[3] <= 'd13;
 		prep_reg27_09_reads[4] <= 'd13;
+		prep_reg27_09_reads[5] <= 'd14;
+		prep_reg27_09_reads[6] <= 'd14;
+		prep_reg27_09_reads[7] <= 'd14;
 
-		prep_reg27_03_reads[0] <= 'd9;
-		prep_reg27_03_reads[1] <= 'd9;
-		prep_reg27_03_reads[2] <= 'd8;
-		prep_reg27_03_reads[3] <= 'd9;
+		prep_reg27_03_reads[0] <= 'd10;
+		prep_reg27_03_reads[1] <= 'd10;
+		prep_reg27_03_reads[2] <= 'd9;
+		prep_reg27_03_reads[3] <= 'd10;
 		prep_reg27_03_reads[4] <= 'd10;
+		prep_reg27_03_reads[5] <= 'd4;
+		prep_reg27_03_reads[6] <= 'd35;
+		prep_reg27_03_reads[7] <= 'd36;
 
 		reg_22_27_read_cnt <= 'd0;
 		reg_22_27 <= 'h00;
@@ -194,12 +245,29 @@ always @ (clk_rw, negedge reset_x) begin
 								state <= s_blip;
 							end
 						end
+						cmd_video : begin
+							if(selected) begin
+								cmd_in <= data_in;
+								state <= s_video;
+								v_state <= v_reg;
+								data_oe <= 'b1;
+							end
+						end
 						cmd_prepare : begin
 							if(selected) begin
 								cmd_in <= data_in;
 								state <= s_prepare;
 								p_state <= prep_reg;
 								data_oe <= 'b1;
+							end
+						end
+						'h11, 'h50, 'h51, 'h62 : begin
+							if(selected) begin
+								cmd_in <= data_in;
+								addr_bytes <= 0;
+								c_state <= cs_addr;
+								reg_addr <= 16'h00;
+								state <= s_cmd;							
 							end
 						end
 						default : begin 
@@ -219,6 +287,42 @@ always @ (clk_rw, negedge reset_x) begin
 				s_blip : begin
 					// empty on purpose
 					state = s_undef;
+				end
+
+				s_video : begin
+					case(v_state)
+						v_reg : begin
+							reg_video <= data_in;
+							v_state <= v_data;
+						end
+						v_data : begin
+							if(!r_wx) begin 
+								case(reg_video)
+									vreg_colorspc : begin
+										case(data_in)
+											video_rgb : video_rgb_ypbpr_x <= 'b1;
+											video_ypbpr : video_rgb_ypbpr_x <= 'b0;
+										endcase
+									end
+									vreg_video_oe : begin
+										case(data_in)
+											video_out_dis : video_oe <= 'b1;
+											video_oe_ext : begin
+												video_oe <= 'b0;
+												video_int_ext_x <= 'b0;
+											end
+											video_oe_int : begin
+												video_oe <= 'b0;
+												video_int_ext_x <= 'b1;
+											end
+										endcase
+									end
+								endcase
+							end
+							state <= s_undef;
+						end
+					endcase
+					out_data <= data_in;
 				end
 
 				s_prepare : begin
@@ -251,21 +355,23 @@ always @ (clk_rw, negedge reset_x) begin
 										reg_22_27 <= data_in;
 										case(data_in)
 											'h03 : begin
-												reg_22_27_read_cnt <= prep_reg27_03_reads[prepare_cnt];
+												reg_22_27_read_cnt <= prep_reg27_03_reads[prepare_cnt-1];
 											end
 											'h09 : begin
-												reg_22_27_read_cnt <= prep_reg27_09_reads[prepare_cnt];
+												reg_22_27_read_cnt <= prep_reg27_09_reads[prepare_cnt-1];
 											end
 										endcase
 									end
 									'h80 : begin
 									end
 								endcase
+								out_data <= data_in;
 							end
 							state <= s_undef;
 						end
 						prep_reg : begin
 							reg_prepare <= data_in;
+							out_data <= data_in;
 							p_state = prep_data;
 						end
 					endcase
@@ -304,9 +410,6 @@ always @ (clk_rw, negedge reset_x) begin
 									end
 								endcase
 							end
-/*							cmd_serial : begin
-								out_data <= reg_serial[data_in];
-							end*/
 						endcase
 						addr_bytes <= addr_bytes + 'b1;
 						c_state <= cs_data;
@@ -331,7 +434,7 @@ always @ (clk_rw, negedge reset_x) begin
 								out_data <= reg_22_24;
 							end
 							'h27 : begin
-								if(reg_22_27_read_cnt > 'h00) begin
+								if(reg_22_27_read_cnt > 'h01) begin
 									reg_22_27_read_cnt <= reg_22_27_read_cnt - 'b1;
 									out_data <= reg_22_27;
 								end else begin
@@ -347,7 +450,16 @@ always @ (clk_rw, negedge reset_x) begin
 						if(r_wx) begin
 							case(cmd_in)
 								cmd_serial : begin
-									out_data <= reg_serial[reg_addr & 'hFF];
+									if(prepare_cnt < 0'd7) begin
+										out_data <= reg_id;
+									end else begin
+										out_data <= reg_serial[reg_addr & 'hFF];
+									end
+								end
+								cmd_video : begin
+									if(reg_video == 'h31) begin
+										out_data <= reg_video_format;
+									end
 								end
 							endcase
 						end
