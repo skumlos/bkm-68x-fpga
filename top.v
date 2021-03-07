@@ -15,7 +15,7 @@ module top(
 	output video_oe_x,
 	input clk_in);
 
-monitor_interface bkm68x_if(.slot_x(slot_x_int_x),
+monitor_interface bkm68x_if(.slot_x_int_x(slot_x_int_x),
 	.clk_rw(clk_rw),
 	.ax_d(ax_d),
 	.r_wx(r_wx),
