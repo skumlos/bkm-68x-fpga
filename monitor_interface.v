@@ -67,21 +67,20 @@ module monitor_interface(
 	input clk_20mhz
 );
 
-reg data_oe;
-reg irq_oe;
-reg irq;
-reg selected;
-reg in_irq;
-reg video_oe;
+reg data_oe = 'b1;
+reg irq_oe = 'b1;
+reg irq = 'b1;
+reg selected = 'b0;
+reg in_irq = 'b0;
+reg video_oe = 'b1;
 
-reg [7:0] slot_no;
+reg [7:0] slot_no = 'h00;
 
-reg [1:0] addr_bytes;
-reg [7:0] cmd_in;
-reg [7:0] addr_in;
-reg [7:0] val_in;
-reg [7:0] data;
-reg [7:0] out_data;
+reg [1:0] addr_bytes = 'h00;
+reg [7:0] cmd_in = 'h00;
+reg [7:0] addr_in = 'h00;
+reg [7:0] val_in = 'h00;
+reg [7:0] out_data = 'hFF;
 
 localparam [7:0]
     s_undef		= 'd00,
@@ -149,30 +148,30 @@ reg [7:0] prep_reg_22;
 reg [7:0] prep_reg_24;
 reg [7:0] prep_reg_27;
 
-reg [3:0] state;
+reg [3:0] state = s_undef;
 reg [3:0] c_state;
 reg [3:0] v_state;
 reg [3:0] i_state;
 
-reg [7:0] reg_init;
-reg [7:0] reg_video;
-reg [7:0] reg_id;
+reg [7:0] reg_init = 'h00;
+reg [7:0] reg_video = 'h00;
+reg [7:0] reg_id = 'h00;
 
-reg [3:0] p_state;
-reg [7:0] reg_prepare;
+reg [3:0] p_state = prep_reg;
+reg [7:0] reg_prepare = 'h00;
 reg [7:0] prep_reg_27_09_reads [0:7];
 reg [7:0] prep_reg_27_03_reads [0:7];
 reg [7:0] prep_reg_27_read_cnt;
-reg [3:0] prepare_cnt;
+reg [3:0] prepare_cnt = 'h00;
 
 reg [7:0] reg_serial [0:6];
 
-reg [15:0] reg_addr;
+reg [15:0] reg_addr = 'h0000;
 
-reg [7:0] reg_video_format;
+reg [7:0] reg_video_format = 'h00;
 
-reg video_rgb_ypbpr_x;
-reg video_int_ext_x;
+reg video_rgb_ypbpr_x = 'b1;
+reg video_int_ext_x = 'b1;
 
 assign int_oe_x = irq_oe;
 assign int_x = irq;
@@ -187,6 +186,7 @@ assign hd_sd_x = (reg_video_format == 'h00) ? 'b1 : (reg_video_format < 'h04 ? '
 
 reg in_reset;
 
+//always @ (*) begin
 always @ (clk_rw, reset_x) begin
 	if(!reset_x) begin
 		in_reset		<=	'b1;
@@ -194,7 +194,6 @@ always @ (clk_rw, reset_x) begin
 		irq			<= 'b0;
 		in_irq		<= 'b0;
 		selected		<= 'b0;
-		data			<= 'hFF;
 		data_oe		<= 'b0;
 		reg_id		<= 'h88;
 		out_data		<= 'hFF;
@@ -330,7 +329,8 @@ always @ (clk_rw, reset_x) begin
 									state <= s_cmd;
 								end
 							end
-			/*
+							default : out_data <= 'hFF;
+/*
 							default : begin 
 								if(selected && slot_no != 'h00) begin
 									cmd_in <= data_in;
@@ -375,6 +375,8 @@ always @ (clk_rw, reset_x) begin
 										end
 										'h42 : init_reg_42 <= data_in;
 										'h43 : init_reg_43 <= data_in;
+										default:
+											out_data <= 'hFF;
 									endcase
 									out_data <= 'hFF;
 								end
@@ -402,6 +404,7 @@ always @ (clk_rw, reset_x) begin
 											case(data_in)
 												video_rgb : video_rgb_ypbpr_x <= 'b1;
 												video_ypbpr : video_rgb_ypbpr_x <= 'b0;
+												default: video_rgb_ypbpr_x <= 'b1;
 											endcase
 										end
 										vreg_video_oe : begin
@@ -415,6 +418,8 @@ always @ (clk_rw, reset_x) begin
 													video_oe <= 'b0;
 													video_int_ext_x <= 'b1;
 												end
+												default:
+													video_oe <= 'b1;
 											endcase
 										end
 									endcase
@@ -517,6 +522,7 @@ always @ (clk_rw, reset_x) begin
 						end
 					end
 
+					default : state <= s_undef;
 				endcase
 			end else begin // clk_rw is low
 				case(state)
@@ -544,18 +550,21 @@ always @ (clk_rw, reset_x) begin
 										out_data <= 'h00;
 									end
 								end
+								default : out_data <= 'hFF;
 							endcase
 						end
 					end
 					
 					s_init : begin
-						case(work_reg)
+						case(reg_init)
 							'h40 : out_data <= init_reg_40;
 							'h41 : out_data <= init_reg_41;
 							'h42 : out_data <= init_reg_42;
 							'h43 : out_data <= init_reg_43;
+							default: out_data <= 'hFF;
 						endcase
 					end
+
 					s_cmd : begin
 						if(ax_d && r_wx) begin
 							case(cmd_in)
@@ -571,9 +580,11 @@ always @ (clk_rw, reset_x) begin
 										out_data <= reg_video_format;
 									end
 								end
+								default : out_data <= 'hFF; 
 							endcase
 						end
 					end
+					default : out_data <= 'hFF;
 				endcase
 			end
 		end

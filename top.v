@@ -6,13 +6,17 @@ module top(
 	input r_wx,
 	input [7:0] ad,
 	input [7:0] ad_out,
-	output hd_sd_x,
-	output rgb_comp_x,
-	output int_ext_x,
 	output irq_oe_x,
 	output ad_oe_x,
 	output irq_x,
+	output hd_sd_x,
+	output rgb_comp_x,
+	output int_ext_x,
 	output video_oe_x,
+	output vsync_out,
+	output hsync_out,
+	input vsync_in,
+	input hsync_in,
 	input clk_in);
 
 monitor_interface bkm68x_if(.slot_x_int_x(slot_x_int_x),
@@ -25,6 +29,10 @@ monitor_interface bkm68x_if(.slot_x_int_x(slot_x_int_x),
 	.data_in(ad),
 	.data_out(ad_out),
 	.data_oe_x(ad_oe_x),
+	.video_oe_x(video_oe_x),
+	.hd_sd_x(hd_sd_x),
+	.rgb_comp_x(rgb_comp_x),
+	.int_ext_x(int_ext_x),
 	.clk_20mhz(clk_in));
 	
 endmodule
