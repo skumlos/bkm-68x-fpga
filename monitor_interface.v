@@ -86,11 +86,10 @@ localparam [7:0]
     s_undef		= 'd00,
 	 s_init		= 'd01,
     s_irq		= 'd02,
-	 s_cmd		= 'd03,
-	 s_sync		= 'd04,
-	 s_blip		= 'd05,
-	 s_prepare	= 'd06,
-	 s_video		= 'd07;
+	 s_prepare	= 'd03,
+	 s_id			= 'd04,
+	 s_video		= 'd05,
+	 s_serial	= 'd06;
 
 localparam [2:0]
 	cs_addr		= 'd01,
@@ -133,9 +132,7 @@ localparam [7:0]
 	cmd_id		= 'h20, // 20 00 88 (68X), 20 00 82 (62HS)
 	cmd_video	= 'h21,
 	cmd_prepare = 'h22,
-	cmd_serial	= 'h23,
-	cmd_blip_1	= 'h30, // no idea what these two do, seemingly not much
-	cmd_blip_2	= 'h40;
+	cmd_serial	= 'h23;
 
 reg [7:0] init_reg_40;
 reg [7:0] init_reg_41;
@@ -186,7 +183,16 @@ assign hd_sd_x = (reg_video_format == 'h00) ? 'b1 : (reg_video_format < 'h04 ? '
 
 reg in_reset;
 
-//always @ (*) begin
+initial begin
+	reg_serial[0] 	<= 'h32;
+	reg_serial[1] 	<= 'h30;
+	reg_serial[2] 	<= 'h30;
+	reg_serial[3] 	<= 'h30;
+	reg_serial[4] 	<= 'h35;
+	reg_serial[5] 	<= 'h35;
+	reg_serial[6] 	<= 'h35;
+end
+
 always @ (clk_rw, reset_x) begin
 	if(!reset_x) begin
 		in_reset		<=	'b1;
@@ -215,14 +221,6 @@ always @ (clk_rw, reset_x) begin
 		slot_no		<= 'h00;
 		reg_init		<= 'h00;
 
-		reg_serial[0] 	<= 'h32;
-		reg_serial[1] 	<= 'h30;
-		reg_serial[2] 	<= 'h30;
-		reg_serial[3] 	<= 'h30;
-		reg_serial[4] 	<= 'h35;
-		reg_serial[5] 	<= 'h35;
-		reg_serial[6] 	<= 'h35;
-
 		prepare_cnt		<= 'd0;
 		p_state			<= prep_reg;
 
@@ -246,20 +244,23 @@ always @ (clk_rw, reset_x) begin
 
 		prep_reg_27_read_cnt <= 'd0;
 		prep_reg_27 <= 'h00;
-
+		in_reset <= 'b1;
 	end else begin
 		if(in_reset) begin
 			in_reset <= 'b0;
+			out_data <= 'hFF;
 		end else begin
+			in_reset <= 'b0;
 			if(clk_rw) begin
 				case(state)
 					s_undef : begin
 						case(data_in)
-
 							cmd_irq : begin
-								state <= s_irq;
-								selected <= 'b1;
-								data_oe <= 'b1;
+								if(!selected) begin
+									state <= s_irq;
+									selected <= 'b1;
+									data_oe <= 'b1;
+								end
 							end
 
 							'hFF : begin
@@ -273,12 +274,6 @@ always @ (clk_rw, reset_x) begin
 								end
 							end
 
-							cmd_blip_1,cmd_blip_2: begin
-								if(selected) begin
-									state <= s_blip;
-								end
-							end
-
 							cmd_init : begin
 								if(!slot_x_int_x) begin
 									cmd_in <= data_in;
@@ -286,7 +281,7 @@ always @ (clk_rw, reset_x) begin
 									i_state <= work_reg;
 									data_oe <= 'b1;
 									state <= s_init;
-								end
+								end else state <= s_undef;
 							end
 
 							cmd_video : begin
@@ -295,18 +290,18 @@ always @ (clk_rw, reset_x) begin
 									state <= s_video;
 									v_state <= v_reg;
 									data_oe <= 'b1;
-								end
+								end else state <= s_undef;
+							end
+
+							cmd_serial : begin
 							end
 
 							cmd_id : begin 
 								if(selected) begin
 									cmd_in <= data_in;
-									addr_bytes <= 0;
-									c_state <= cs_addr;
-									reg_addr <= 16'h00;
-									state <= s_cmd;
 									data_oe <= 'b1;
-								end
+									state <= s_id;
+								end else state <= s_undef;
 							end
 
 							cmd_prepare : begin
@@ -315,32 +310,14 @@ always @ (clk_rw, reset_x) begin
 									state <= s_prepare;
 									p_state <= prep_reg;
 									data_oe <= 'b1;
-								end
+								end else state <= s_undef;
 							end
 
-							'h11, 
-							'h50, 'h51, 'h52, 'h53, 
-							'h60, 'h61, 'h62, 'h63 : begin
-								if(selected) begin
-									cmd_in <= data_in;
-									addr_bytes <= 0;
-									c_state <= cs_addr;
-									reg_addr <= 16'h00;
-									state <= s_cmd;
-								end
+							default : begin
+								out_data <= 'hFF;
+								data_oe <= 'b0;
+								state <= s_undef;
 							end
-							default : out_data <= 'hFF;
-/*
-							default : begin 
-								if(selected && slot_no != 'h00) begin
-									cmd_in <= data_in;
-									addr_bytes <= 0;
-									c_state <= cs_addr;
-									reg_addr <= 16'h00;
-									state <= s_cmd;
-									data_oe <= 'b1;
-								end
-							end*/
 						endcase
 						out_data <= 'hFF;
 					end
@@ -385,11 +362,6 @@ always @ (clk_rw, reset_x) begin
 						endcase
 					end
 
-					s_blip : begin
-						// empty on purpose
-						state = s_undef;
-					end
-
 					s_video : begin
 						case(v_state)
 							v_reg : begin
@@ -422,8 +394,10 @@ always @ (clk_rw, reset_x) begin
 													video_oe <= 'b1;
 											endcase
 										end
+										default : begin
+											out_data <= data_in;
+										end
 									endcase
-									out_data <= data_in;
 								end
 								state <= s_undef;
 							end
@@ -452,7 +426,10 @@ always @ (clk_rw, reset_x) begin
 										'h26 : begin
 											case(data_in)
 												'h01 : begin
-													prepare_cnt <= prepare_cnt + 'b1;									
+													prepare_cnt <= prepare_cnt + 'b1;
+												end
+												default: begin
+													prepare_cnt <= 'h00;
 												end
 											endcase
 										end
@@ -469,6 +446,8 @@ always @ (clk_rw, reset_x) begin
 										end
 										'h80 : begin
 										end
+										default : begin
+										end
 									endcase
 									out_data <= data_in;
 								end
@@ -478,6 +457,9 @@ always @ (clk_rw, reset_x) begin
 								reg_prepare <= data_in;
 								out_data <= data_in;
 								p_state = prep_data;
+							end
+							default : begin
+								out_data <= 'hFF;
 							end
 						endcase
 					end
@@ -490,40 +472,29 @@ always @ (clk_rw, reset_x) begin
 								if(!irq_oe) begin
 									selected <= 'b0;
 								end
-								data_oe <= 'b0;
+								data_oe <= 'b1;
 								state <= s_undef;
 							end
 						endcase
 						out_data <= 'hFF;
 					end
 
-					s_cmd : begin
-						if(ax_d) begin
-							if(!r_wx) begin
-									// write byte
-							end
-							state <= s_undef;
+					s_serial : begin
+						if(prepare_cnt < 'd07) begin
+							out_data <= reg_id;
 						end else begin
-							reg_addr <= reg_addr + (data_in << addr_bytes);
-							case(cmd_in)
-								cmd_id : begin
-									case(data_in)
-										'h00 : begin
-											out_data <= reg_id;
-										end
-										default : begin
-											out_data <= 'h00;
-										end
-									endcase
-								end
-							endcase
-							addr_bytes <= addr_bytes + 'b1;
-							c_state <= cs_data;
+							out_data <= reg_serial[data_in];
 						end
 					end
-
+					s_id : begin
+						case(data_in)
+							'h00 : out_data <= reg_id;
+							default : out_data <= 'hFF;
+						endcase
+					end
 					default : state <= s_undef;
 				endcase
+				out_data <= 'hFF;
 			end else begin // clk_rw is low
 				case(state)
 					s_prepare : begin
@@ -552,7 +523,7 @@ always @ (clk_rw, reset_x) begin
 								end
 								default : out_data <= 'hFF;
 							endcase
-						end
+						end else out_data <= 'hFF;
 					end
 					
 					s_init : begin
@@ -564,7 +535,7 @@ always @ (clk_rw, reset_x) begin
 							default: out_data <= 'hFF;
 						endcase
 					end
-
+/*
 					s_cmd : begin
 						if(ax_d && r_wx) begin
 							case(cmd_in)
@@ -578,12 +549,12 @@ always @ (clk_rw, reset_x) begin
 								cmd_video : begin
 									if(reg_video == 'h31) begin
 										out_data <= reg_video_format;
-									end
+									end else out_data <= 'hFF;
 								end
 								default : out_data <= 'hFF; 
 							endcase
-						end
-					end
+						end else out_data <= 'hFF;
+					end*/
 					default : out_data <= 'hFF;
 				endcase
 			end
