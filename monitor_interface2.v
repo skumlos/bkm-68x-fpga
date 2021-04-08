@@ -110,6 +110,8 @@ reg [7:0] reg_video_format = 'h00;
 reg [7:0] reg_video = 'h00;
 reg [7:0] reg_serial [0:6];
 
+reg [3:0] serial_reads = 'h00;
+
 assign data_out = out_data;
 assign data_oe_x = !(data_oe && r_wx && ax_d && reset_x);
 assign int_oe_x = !irq_oe;
@@ -121,13 +123,13 @@ assign int_ext_x = video_int_ext_x;
 assign hd_sd_x = (reg_video_format == 'h00) ? 1'b1 : (reg_video_format < 'h03 ? 1'b0 : 1'b1);
 
 initial begin
-	reg_serial[0] 	<= 'h32;
-	reg_serial[1] 	<= 'h30;
-	reg_serial[2] 	<= 'h30;
-	reg_serial[3] 	<= 'h31;
-	reg_serial[4] 	<= 'h33;
-	reg_serial[5] 	<= 'h33;
-	reg_serial[6] 	<= 'h37;
+	reg_serial[0] 	<= 'h31;
+	reg_serial[1] 	<= 'h31;
+	reg_serial[2] 	<= 'h33;
+	reg_serial[3] 	<= 'h38;
+	reg_serial[4] 	<= 'h36;
+	reg_serial[5] 	<= 'h36;
+	reg_serial[6] 	<= 'h36;
 
 	prep_reg_27_09_reads[0] <= 8'd13;
 	prep_reg_27_09_reads[1] <= 8'd14;
@@ -162,6 +164,9 @@ initial begin
 	is_init <= 1'b0;
 	id_read <= 1'b0;
 	serial_read <= 1'b0;
+	serial_reads <= 'h0;
+	strobe_irq_clr <= 'b0;
+	irq_cleared <= 'b1;
 end
 
 always @ (slot_no) begin
@@ -198,6 +203,7 @@ reg strobe_irq_req = 'b0;
 
 reg [7:0] clear_irq = 'h00;
 reg strobe_irq_clr = 'b0;
+reg irq_cleared = 'b0;
 /*
 always@(video_format) begin
 	pending_irq <= init_reg_41 & 8'hDF;
@@ -222,43 +228,49 @@ reg id_read = 1'b0;
 reg serial_read = 1'b0;
 
 reg [3:0] init_phase = 'h00;
-/*
+
 always @ (posedge clk_50mhz_in) begin
-	if(strobe_irq_req == 1'b1) strobe_irq_req <= 1'b0;
+//	if(strobe_irq_req == 1'b1) strobe_irq_req <= 1'b0;
+	case({strobe_irq_clr,irq_cleared})
+		2'b10 : begin
+			init_reg_41 <= init_reg_41 | clear_irq;
+			irq_cleared <= 1'b1;
+		end
+		2'b01 : begin
+			irq_cleared <= 1'b0;
+		end
+		default: irq_cleared <= irq_cleared;
+	endcase
+
 	case(init_phase)
 		'h00 : begin
-			if(is_init) begin
+			if(init_reg_41 == 'hFF) begin
 				init_phase <= 'h01;
 			end
 		end
 		'h01 : begin
-			if(id_read == 1'b1) begin
-				pending_irq <= 'hFB;
-				strobe_irq_req <= 1'b1;
+			if(id_read == 1'b1 && elapsed_s > 12) begin
+				init_reg_41 <= 'hFB;
 				init_phase <= 'h02;
 			end
 		end
 		'h02 : begin
-			if(serial_read == 1'b1) begin
-				pending_irq <= 'hEF;
-				strobe_irq_req <= 1'b1;
-				init_phase <= 'h02;
+			if(init_reg_41 == 'hFF && elapsed_s > 'h15) begin
+				init_reg_41 <= 'hEF;
+				init_phase <= 'h03;
 			end
 		end
 	endcase	
 end
-*/
+/*
 always @ (posedge strobe_irq_req, posedge strobe_irq_clr) begin
-	if(strobe_irq_req == 'b1) begin
-		init_reg_41 <= init_reg_41 & pending_irq;
-	end else if(strobe_irq_clr == 'b1) begin
-		init_reg_41 <= init_reg_41 | clear_irq;
-/*		if(init_reg_41[1] == 1'b1) begin
-			is_init <= 1'b1;
-		end*/
+	if(strobe_irq_req == 1'b1) begin
+		init_reg_41 <= pending_irq;
+	end else if(strobe_irq_clr == 1'b1) begin
+		init_reg_41 <= clear_irq;
 	end
 end
-
+*/
 always @ (posedge clk_rw, negedge reset_x) begin
 	if(!reset_x) begin
 		state <= s_undef;
@@ -267,7 +279,7 @@ always @ (posedge clk_rw, negedge reset_x) begin
 		prep_reg_27_read_cnt <= 'd0;
 		prep_reg_27 <= 'h00;
 	end else begin
-		strobe_irq_clr <= 'b0;
+		if(irq_cleared == 1'b1) strobe_irq_clr <= 'b0;
 		case(state)
 			s_undef: begin
 				case(data_in)
@@ -462,17 +474,21 @@ always @ (posedge clk_rw, negedge reset_x) begin
 
 			s_serial : begin
 				case(data_in)
-					'h00 : out_data <= reg_serial[0];
+					'h00 : begin
+						if(serial_reads < 'h06) begin
+							out_data <= val_id;
+							serial_reads <= serial_reads + 1'b1;
+						end else begin
+							out_data <= reg_serial[0];
+						end
+					end
 					'h01 : out_data <= reg_serial[1];
 					'h02 : out_data <= reg_serial[2];
 					'h03 : out_data <= reg_serial[3];
 					'h04 : out_data <= reg_serial[4];
 					'h05 : out_data <= reg_serial[5];
-					'h06 : begin
-						out_data <= reg_serial[6];
-						serial_read <= 1'b1;
-					end
-					default : out_data <= reg_serial[0];
+					'h06 : out_data <= reg_serial[6];
+					default : out_data <= 'h30;
 				endcase
 				state <= s_wait_next;
 			end
@@ -535,7 +551,6 @@ always @ (posedge clk_rw, negedge reset_x) begin
 									slot_no <= data_in;
 								end
 								'h40 : init_reg_40 <= data_in;
-//								'h41 : init_reg_41 <= (init_reg_41 | data_in);
 								'h41 : begin
 									clear_irq <= data_in;
 									strobe_irq_clr <= 'b1;									
