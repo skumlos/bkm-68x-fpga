@@ -5,7 +5,7 @@ module top(
 	input reset_x,
 	input r_wx,
 	input [7:0] ad,
-	input [7:0] ad_out,
+	output [7:0] ad_out,
 	output irq_oe_x,
 	output ad_oe_x,
 	output irq_x,
@@ -15,24 +15,53 @@ module top(
 	output video_oe_x,
 	output vsync_out,
 	output hsync_out,
+	output led1,
+	output led2,
+	output led3,
+	output led4,
+	output led5,
+	input dip1,
+	input dip2,
 	input vsync_in,
 	input hsync_in,
 	input clk_in);
 
-monitor_interface bkm68x_if(.slot_x_int_x(slot_x_int_x),
-	.clk_rw(clk_rw),
-	.ax_d(ax_d),
-	.r_wx(r_wx),
-	.reset_x(reset_x),
+wire [7:0] video_format;
+
+assign vsync_out = vsync_in;
+assign hsync_out = hsync_in;
+assign led2 = 1'b0;
+assign led3 = 1'b1;
+
+heartbeat hb(
+	.clk_50mhz_in(clk_in),
+	.heartbeat_out(led1)
+);
+
+video_format_detector vf_det(
+	.clk_50mhz_in(clk_in),
+	.vsync_in(vsync_in),
+	.hsync_in(hsync_in),
+	.video_format(video_format)
+);
+
+monitor_interface2 bkm68x_if(
+	.slot_x_int_x(~slot_x_int_x),
+	.clk_rw(~clk_rw),
+	.ax_d(~ax_d),
+	.r_wx(~r_wx),
+	.reset_x(~reset_x),
 	.int_x(irq_x),
 	.int_oe_x(irq_oe_x),
-	.data_in(ad),
+	.data_in_x(ad),
 	.data_out(ad_out),
 	.data_oe_x(ad_oe_x),
 	.video_oe_x(video_oe_x),
 	.hd_sd_x(hd_sd_x),
 	.rgb_comp_x(rgb_comp_x),
 	.int_ext_x(int_ext_x),
-	.clk_20mhz(clk_in));
+	.video_format(video_format),
+	.clk_50mhz_in(clk_in)
+);
 	
 endmodule

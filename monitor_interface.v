@@ -64,7 +64,7 @@ module monitor_interface(
 	output rgb_comp_x,
 	output int_ext_x,
 	output hd_sd_x,
-	input clk_20mhz
+	input clk_25mhz
 );
 
 reg data_oe = 'b1;
