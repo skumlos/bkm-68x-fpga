@@ -108,14 +108,20 @@ reg [2:0] i_state = work_reg;
 
 reg [7:0] reg_video_format = 'h00;
 reg [7:0] reg_video = 'h00;
-reg [7:0] reg_serial [0:6];
+
+reg [7:0] reg_serial_b0;
+reg [7:0] reg_serial_b1;
+reg [7:0] reg_serial_b2;
+reg [7:0] reg_serial_b3;
+reg [7:0] reg_serial_b4;
+reg [7:0] reg_serial_b5;
+reg [7:0] reg_serial_b6;
 
 reg [3:0] serial_reads = 'h00;
 
 assign data_out = out_data;
 assign data_oe_x = !(data_oe && r_wx && ax_d && reset_x);
 assign int_oe_x = !irq_oe;
-//assign int_x = !irq;
 assign int_x = !(init_reg_41 != 'hFF);
 assign video_oe_x = !(video_oe);
 assign rgb_comp_x = video_rgb_ypbpr_x;
@@ -123,13 +129,13 @@ assign int_ext_x = video_int_ext_x;
 assign hd_sd_x = (reg_video_format == 'h00) ? 1'b1 : (reg_video_format < 'h03 ? 1'b0 : 1'b1);
 
 initial begin
-	reg_serial[0] 	<= 'h31;
-	reg_serial[1] 	<= 'h31;
-	reg_serial[2] 	<= 'h33;
-	reg_serial[3] 	<= 'h38;
-	reg_serial[4] 	<= 'h36;
-	reg_serial[5] 	<= 'h36;
-	reg_serial[6] 	<= 'h36;
+	reg_serial_b0 	<= 'h32;
+	reg_serial_b1 	<= 'h30;
+	reg_serial_b2 	<= 'h30;
+	reg_serial_b3 	<= 'h30;
+	reg_serial_b4 	<= 'h35;
+	reg_serial_b5 	<= 'h35;
+	reg_serial_b6 	<= 'h35;
 
 	prep_reg_27_09_reads[0] <= 8'd13;
 	prep_reg_27_09_reads[1] <= 8'd14;
@@ -161,9 +167,7 @@ initial begin
 	init_reg_41 <= 'hFD;
 	init_reg_42 <= 'hFF;
 	init_reg_43 <= 'hFD;
-	is_init <= 1'b0;
 	id_read <= 1'b0;
-	serial_read <= 1'b0;
 	serial_reads <= 'h0;
 	strobe_irq_clr <= 'b0;
 	irq_cleared <= 'b1;
@@ -198,9 +202,6 @@ always @ (slot_no) begin
 	endcase
 end
 
-reg [7:0] pending_irq = 'hFF;
-reg strobe_irq_req = 'b0;
-
 reg [7:0] clear_irq = 'h00;
 reg strobe_irq_clr = 'b0;
 reg irq_cleared = 'b0;
@@ -223,17 +224,15 @@ always @ (posedge clk_50mhz_in) begin
 	end
 end
 
-reg is_init = 1'b0;
 reg id_read = 1'b0;
-reg serial_read = 1'b0;
 
 reg [3:0] init_phase = 'h00;
 
 always @ (posedge clk_50mhz_in) begin
-//	if(strobe_irq_req == 1'b1) strobe_irq_req <= 1'b0;
 	case({strobe_irq_clr,irq_cleared})
 		2'b10 : begin
-			init_reg_41 <= init_reg_41 | clear_irq;
+			//init_reg_41 <= init_reg_41 | clear_irq;
+			init_reg_41 <= 'hFF;
 			irq_cleared <= 1'b1;
 		end
 		2'b01 : begin
@@ -249,15 +248,24 @@ always @ (posedge clk_50mhz_in) begin
 			end
 		end
 		'h01 : begin
-			if(id_read == 1'b1 && elapsed_s > 12) begin
+			if(id_read == 1'b1 && elapsed_s > 'hC) begin
 				init_reg_41 <= 'hFB;
 				init_phase <= 'h02;
 			end
 		end
 		'h02 : begin
-			if(init_reg_41 == 'hFF && elapsed_s > 'h15) begin
+			if(init_reg_41 == 'hFF && elapsed_s > 'h13) begin
 				init_reg_41 <= 'hEF;
 				init_phase <= 'h03;
+			end
+		end
+		'h03 : begin
+			if(init_reg_41 == 'hFF && video_format != reg_video_format) begin
+//			if(init_reg_41 == 'hFF && elapsed_s == 'h16) begin
+				reg_video_format <= video_format;
+//				reg_video_format <= 'h02;
+				init_reg_41 <= 'hDF;
+//				init_phase <= 'h04;
 			end
 		end
 	endcase	
@@ -327,6 +335,7 @@ always @ (posedge clk_rw, negedge reset_x) begin
 						end else begin
 							state <= s_wait_next;
 						end
+						out_data <= 'hFF;
 					end
 					default : state <= s_wait_next;
 				endcase
@@ -479,16 +488,16 @@ always @ (posedge clk_rw, negedge reset_x) begin
 							out_data <= val_id;
 							serial_reads <= serial_reads + 1'b1;
 						end else begin
-							out_data <= reg_serial[0];
+							out_data <= reg_serial_b0;
 						end
 					end
-					'h01 : out_data <= reg_serial[1];
-					'h02 : out_data <= reg_serial[2];
-					'h03 : out_data <= reg_serial[3];
-					'h04 : out_data <= reg_serial[4];
-					'h05 : out_data <= reg_serial[5];
-					'h06 : out_data <= reg_serial[6];
-					default : out_data <= 'h30;
+					'h01 : out_data <= reg_serial_b1;
+					'h02 : out_data <= reg_serial_b2;
+					'h03 : out_data <= reg_serial_b3;
+					'h04 : out_data <= reg_serial_b4;
+					'h05 : out_data <= reg_serial_b5;
+					'h06 : out_data <= reg_serial_b6;
+					default : out_data <= reg_serial_b0;
 				endcase
 				state <= s_wait_next;
 			end
@@ -498,7 +507,10 @@ always @ (posedge clk_rw, negedge reset_x) begin
 					v_reg : begin
 						reg_video <= data_in;
 						v_state <= v_data;
-						out_data <= data_in;
+						case(data_in)
+							vreg_format : out_data <= reg_video_format;
+							default : out_data <= data_in;
+						endcase
 					end
 					v_data : begin
 						if(!r_wx) begin // write data

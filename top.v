@@ -27,11 +27,14 @@ module top(
 	input clk_in);
 
 wire [7:0] video_format;
+//reg [7:0] video_format;
 
-assign vsync_out = vsync_in;
-assign hsync_out = hsync_in;
-assign led2 = 1'b0;
-assign led3 = 1'b1;
+assign vsync_out = ~vsync_in;
+assign hsync_out = ~hsync_in;
+assign led2 = video_format[0];
+assign led3 = video_format[1];
+assign led4 = video_format[2];
+assign led5 = video_format[3];
 
 heartbeat hb(
 	.clk_50mhz_in(clk_in),

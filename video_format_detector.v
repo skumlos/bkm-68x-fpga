@@ -22,7 +22,7 @@ reg [31:0] clk_count = 'h0;
 reg [7:0] reg_format = 'h00;
 
 assign video_format = reg_format;
-
+/*
 always @ (vsync_frq, horiz_during_vsync) begin
 	if(vsync_frq != 0 && horiz_during_vsync != 0) begin
 		if(vsync_frq < 52) begin
@@ -48,21 +48,27 @@ always @ (vsync_frq, horiz_during_vsync) begin
 		reg_format <= 'h0;
 	end
 end
+*/
+
+always@(vsync_frq) begin
+	if(vsync_frq != 'h00) begin
+		reg_format <= 'h02;
+	end else begin
+		reg_format <= 'h00;
+	end
+end
 
 always @ (posedge clk_50mhz_in) begin
-	if(clk_50mhz_in == 1'b1) begin
+//	if(clk_50mhz_in == 1'b1) begin
 		if(clk_count < frq_hz) begin
 			clk_count <= clk_count + 1'b1;
 			sample <= 'b1;
 		end else begin
 			clk_count <= 'h0;
+			vsync_frq <= vsync_cnt;
 			sample <= 'b0;
 		end
-	end
-end
-
-always @ (negedge sample) begin
-	vsync_frq <= vsync_cnt;
+//	end
 end
 
 always @ (negedge vsync_in, negedge sample) begin
