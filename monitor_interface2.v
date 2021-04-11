@@ -13,6 +13,7 @@ module monitor_interface2(
 	output rgb_comp_x,
 	output int_ext_x,
 	output hd_sd_x,
+	input skip_init,
 	input [7:0] video_format,
 	input clk_50mhz_in
 );
@@ -81,10 +82,10 @@ reg video_int_ext_x = 'b0;
 reg [2:0] p_state = prep_reg;
 reg [7:0] reg_prepare = 'h00;
 
-reg [7:0] cmd_id			= 'h00; // X0 00 88 (68X), X0 00 82 (62HS) (X = 2 (OPT1), 3 (OPT2) or 4 (OPT3))
-reg [7:0] cmd_video		= 'h01;
-reg [7:0] cmd_prepare	= 'h02;
-reg [7:0] cmd_serial		= 'h03;
+reg [7:0] cmd_id			= 'h20; // X0 00 88 (68X), X0 00 82 (62HS) (X = 2 (OPT1), 3 (OPT2) or 4 (OPT3))
+reg [7:0] cmd_video		= 'h21;
+reg [7:0] cmd_prepare	= 'h22;
+reg [7:0] cmd_serial		= 'h23;
 
 reg [7:0] init_reg_40	= 'hFF;
 reg [7:0] init_reg_41	= 'hFD;
@@ -133,9 +134,9 @@ initial begin
 	reg_serial_b1 	<= 'h30;
 	reg_serial_b2 	<= 'h30;
 	reg_serial_b3 	<= 'h30;
-	reg_serial_b4 	<= 'h35;
-	reg_serial_b5 	<= 'h35;
-	reg_serial_b6 	<= 'h35;
+	reg_serial_b4 	<= 'h38;
+	reg_serial_b5 	<= 'h31;
+	reg_serial_b6 	<= 'h34;
 
 	prep_reg_27_09_reads[0] <= 8'd13;
 	prep_reg_27_09_reads[1] <= 8'd14;
@@ -205,13 +206,7 @@ end
 reg [7:0] clear_irq = 'h00;
 reg strobe_irq_clr = 'b0;
 reg irq_cleared = 'b0;
-/*
-always@(video_format) begin
-	pending_irq <= init_reg_41 & 8'hDF;
-	reg_video_format <= video_format;
-	strobe_irq_req <= 'b1;
-end
-*/
+
 reg [7:0] elapsed_s = 'h0;
 reg [31:0] clk_count = 'h00;
 localparam frq_hz = 50000000;
@@ -245,6 +240,8 @@ always @ (posedge clk_50mhz_in) begin
 		'h00 : begin
 			if(init_reg_41 == 'hFF) begin
 				init_phase <= 'h01;
+			end else if(skip_init) begin
+				init_phase <= 'h03;
 			end
 		end
 		'h01 : begin
@@ -261,24 +258,13 @@ always @ (posedge clk_50mhz_in) begin
 		end
 		'h03 : begin
 			if(init_reg_41 == 'hFF && video_format != reg_video_format) begin
-//			if(init_reg_41 == 'hFF && elapsed_s == 'h16) begin
 				reg_video_format <= video_format;
-//				reg_video_format <= 'h02;
 				init_reg_41 <= 'hDF;
-//				init_phase <= 'h04;
 			end
 		end
 	endcase	
 end
-/*
-always @ (posedge strobe_irq_req, posedge strobe_irq_clr) begin
-	if(strobe_irq_req == 1'b1) begin
-		init_reg_41 <= pending_irq;
-	end else if(strobe_irq_clr == 1'b1) begin
-		init_reg_41 <= clear_irq;
-	end
-end
-*/
+
 always @ (posedge clk_rw, negedge reset_x) begin
 	if(!reset_x) begin
 		state <= s_undef;
@@ -524,7 +510,7 @@ always @ (posedge clk_rw, negedge reset_x) begin
 								end
 								vreg_video_oe : begin
 									video_int_ext_x <= data_in[0];
-									// video_apa_on <= data_in[1]; // not implemented
+									// video_apa_on <= data_in[1]; // not (yet) implemented
 									video_oe <= data_in[3];
 								end
 								default : begin
