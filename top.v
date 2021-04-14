@@ -16,6 +16,7 @@ module top(
 	output vsync_out,
 	output hsync_out,
 	output hsync_pll_out,
+	output vsyncout,
 	output led1,
 	output led2,
 	output led3,
@@ -30,9 +31,11 @@ module top(
 	output clk_out);
 
 wire [7:0] video_format;
+
 assign vsync_out = ~vsync_in;
 assign hsync_out = ~hsync_in;
 
+assign vsyncout = ~video_format[0];
 assign led1 = ~video_format[0];
 assign led2 = ~video_format[1];
 assign led3 = ~video_format[2];
