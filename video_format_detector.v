@@ -32,27 +32,44 @@ defparam clk25mhz.DIVISOR = 28'd2;
 localparam frq_hz = 50000000;
 
 reg [31:0] hsync_cnt = 'h00;
-
 reg [31:0] vsync_frq = 'h0;
-
 reg [31:0] clk_count = 'h0;
-
 reg [7:0] reg_format = 'h00;
 
 wire vsync_count_clk = clk & vsync_filter;
 wire hsync_count_clk = hsync_filter & vsync_filter;
 
 assign video_format = reg_format;
-
-assign sample_out = hsync_count_clk;
+assign sample_out = reset_x;
 
 initial begin
 	clk_count = 'h0;
 	
 	hsync_cnt = 'h0;
 	vsync_frq = 'h0;
+	reset_x = 1'b1;
 
 	reg_format = 'h00;
+end
+
+reg [31:0] keepalive = 0;
+reg reset_x = 1'b1;
+
+reg last_hsync_in = 1'b1;
+
+always @ (posedge clk) begin
+	if(hsync_filter != last_hsync_in) begin
+		reset_x <= 1'b1;
+		keepalive <= 0;
+	end else begin
+		keepalive <= keepalive + 1'b1;
+		if(keepalive >= 10000000) begin
+			reset_x <= 1'b0;
+		end else begin
+			reset_x <= 1'b1;
+		end
+	end
+	last_hsync_in <= hsync_filter;
 end
 
 always @ (posedge clk_50mhz_in) begin
@@ -76,47 +93,55 @@ always @ (negedge hsync_count_clk, negedge vsync_filter) begin
 	end
 end
 
-always @ (negedge vsync_filter) begin
-	if(vsync_frq == 50) begin
-		if(hsync_cnt < 380) begin
-			reg_format = 'h01; // 576i50
-		end else if(hsync_cnt < 550) begin
-			reg_format = 'h0B; // 1080i50, unverified
-		end else if(hsync_cnt < 590) begin
-			reg_format = 'h03; // 576p50
-		end else if(hsync_cnt < 740) begin
-			reg_format = 'h12; // 720p50, unverified
-		end else begin
-			reg_format = 'h00; // sum-ting-wong
-		end
-	end else if(vsync_frq == 60) begin
-		if(hsync_cnt < 300) begin
-			reg_format = 'h02; // 480i60
-		end else if(hsync_cnt < 500) begin
-			reg_format = 'h04; // 480p60
-		end else if(hsync_cnt < 560) begin
-			reg_format = 'h0C; // 1080i60
-		end else if(hsync_cnt < 740) begin
-			reg_format = 'h13; // 720p60
-		end else begin
-			reg_format = 'h00; // sum-ting-wong
-		end
-	end else begin
+always @ (negedge vsync_filter,negedge reset_x) begin
+	if(!reset_x) begin
 		reg_format = 'h00;
+	end else begin
+		if(vsync_frq == 50) begin
+			if(hsync_cnt < 380) begin
+				reg_format = 'h01; // 576i50
+			end else if(hsync_cnt < 550) begin
+				reg_format = 'h0B; // 1080i50, unverified
+			end else if(hsync_cnt < 590) begin
+				reg_format = 'h03; // 576p50
+			end else if(hsync_cnt < 740) begin
+				reg_format = 'h12; // 720p50, unverified
+			end else begin
+				reg_format = 'h00; // sum-ting-wong
+			end
+		end else if(vsync_frq == 60) begin
+			if(hsync_cnt < 300) begin
+				reg_format = 'h02; // 480i60
+			end else if(hsync_cnt < 500) begin
+				reg_format = 'h04; // 480p60
+			end else if(hsync_cnt < 560) begin
+				reg_format = 'h0C; // 1080i60
+			end else if(hsync_cnt < 740) begin
+				reg_format = 'h13; // 720p60
+			end else begin
+				reg_format = 'h00; // sum-ting-wong
+			end
+		end else begin
+			reg_format = 'h00;
+		end
 	end
 end
 
 reg [31:0] clk_in_vsync_cnt = 0;
 
-always @ (negedge vsync_filter) begin
-	if(clk_in_vsync_cnt < 350000) begin
+always @ (negedge vsync_filter, negedge reset_x) begin
+	if(!reset_x) begin
 		vsync_frq = 0;
-	end else if(clk_in_vsync_cnt < 425000) begin
-		vsync_frq = 60;
-	end else if(clk_in_vsync_cnt < 525000) begin
-		vsync_frq = 50;
 	end else begin
-		vsync_frq = 0;
+		if(clk_in_vsync_cnt < 350000) begin
+			vsync_frq = 0;
+		end else if(clk_in_vsync_cnt < 425000) begin
+			vsync_frq = 60;
+		end else if(clk_in_vsync_cnt < 525000) begin
+			vsync_frq = 50;
+		end else begin
+			vsync_frq = 0;
+		end
 	end
 end
 
