@@ -126,7 +126,7 @@ assign int_oe_x = !irq_oe;
 assign int_x = !(init_reg_41 != 'hFF);
 assign video_oe_x = !(video_oe);
 assign rgb_comp_x = video_rgb_ypbpr_x;
-assign int_ext_x = video_int_ext_x;
+assign int_ext_x = ~video_int_ext_x;
 assign hd_sd_x = (reg_video_format == 'h00) ? 1'b1 : (reg_video_format < 'h03 ? 1'b0 : 1'b1);
 
 initial begin
