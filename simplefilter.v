@@ -3,7 +3,7 @@ module simplefilter (
 	input sig_in,
 	output sig_out);
 
-parameter FILTER_LEN = 100; // 2us @ 50 MHz
+parameter FILTER_LEN = 50; // 1us @ 50 MHz
 
 reg filter = 1'b0;
 

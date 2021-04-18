@@ -102,9 +102,9 @@ always @ (negedge vsync_filter,negedge reset_x) begin
 				reg_format = 'h01; // 576i50
 			end else if(hsync_cnt < 560) begin
 				reg_format = 'h0B; // 1080i50, unverified
-			end else if(hsync_cnt < 620) begin
+			end else if(hsync_cnt < 635) begin
 				reg_format = 'h03; // 576p50
-			end else if(hsync_cnt < 800) begin
+			end else if(hsync_cnt < 760) begin
 				reg_format = 'h12; // 720p50, unverified
 			end else begin
 				reg_format = 'h00; // sum-ting-wong
@@ -112,11 +112,11 @@ always @ (negedge vsync_filter,negedge reset_x) begin
 		end else if(vsync_frq == 60) begin
 			if(hsync_cnt < 300) begin
 				reg_format = 'h02; // 480i60
-			end else if(hsync_cnt < 560) begin
+			end else if(hsync_cnt < 535) begin
 				reg_format = 'h04; // 480p60
-			end else if(hsync_cnt < 620) begin
+			end else if(hsync_cnt < 560) begin
 				reg_format = 'h0C; // 1080i60
-			end else if(hsync_cnt < 800) begin
+			end else if(hsync_cnt < 760) begin
 				reg_format = 'h13; // 720p60
 			end else begin
 				reg_format = 'h00; // sum-ting-wong
