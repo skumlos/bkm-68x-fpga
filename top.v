@@ -36,6 +36,7 @@ assign vsync_out = ~vsync_in;
 assign hsync_out = ~hsync_in;
 
 assign vsyncout = ~video_format[0];
+
 assign led1 = ~video_format[0];
 assign led2 = ~video_format[1];
 assign led3 = ~video_format[2];
@@ -59,7 +60,8 @@ video_format_detector vf_det(
 	.video_format(video_format)
 );
 
-monitor_interface2 bkm68x_if(
+monitor_interface
+ bkm68x_if(
 	.slot_x_int_x(~slot_x_int_x),
 	.clk_rw(~clk_rw),
 	.ax_d(~ax_d),

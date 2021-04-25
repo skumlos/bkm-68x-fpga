@@ -1,4 +1,4 @@
-module monitor_interface2(
+module monitor_interface(
 	input slot_x_int_x,
 	input clk_rw,
 	input ax_d,
