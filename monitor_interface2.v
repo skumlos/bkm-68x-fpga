@@ -10,10 +10,10 @@ module monitor_interface(
 	output [7:0] data_out,
 	output data_oe_x,
 	output video_oe_x,
+	output apt_on,
 	output rgb_comp_x,
 	output int_ext_x,
 	output hd_sd_x,
-	input skip_init,
 	input [7:0] video_format,
 	input clk_50mhz_in
 );
@@ -78,6 +78,7 @@ localparam [7:0]
 
 reg video_rgb_ypbpr_x = 'b0;
 reg video_int_ext_x = 'b0;
+reg video_apt_on = 'b0;
 
 reg [2:0] p_state = prep_reg;
 reg [7:0] reg_prepare = 'h00;
@@ -123,6 +124,7 @@ reg [3:0] serial_reads = 'h00;
 assign data_out = out_data;
 assign data_oe_x = !(data_oe && r_wx && ax_d && reset_x);
 assign int_oe_x = !irq_oe;
+assign apt_on = video_apt_on;
 assign int_x = !(init_reg_41 != 'hFF);
 assign video_oe_x = !(video_oe);
 assign rgb_comp_x = video_rgb_ypbpr_x;
@@ -134,9 +136,9 @@ initial begin
 	reg_serial_b1 	<= 'h30;
 	reg_serial_b2 	<= 'h30;
 	reg_serial_b3 	<= 'h30;
-	reg_serial_b4 	<= 'h38;
-	reg_serial_b5 	<= 'h31;
-	reg_serial_b6 	<= 'h34;
+	reg_serial_b4 	<= 'h35;
+	reg_serial_b5 	<= 'h35;
+	reg_serial_b6 	<= 'h35;
 
 	prep_reg_27_09_reads[0] <= 8'd13;
 	prep_reg_27_09_reads[1] <= 8'd14;
@@ -158,6 +160,7 @@ initial begin
 
 	irq_oe <= 'b1;
 	data_oe <= 'b0;
+	video_apt_on <= 1'b0;
 
 	reg_video_format <= 'h00;
 	video_rgb_ypbpr_x <= 'b0; // init ypbpr
@@ -240,8 +243,6 @@ always @ (posedge clk_50mhz_in) begin
 		'h00 : begin
 			if(init_reg_41 == 'hFF) begin
 				init_phase <= 'h01;
-			end else if(skip_init) begin
-				init_phase <= 'h03;
 			end
 		end
 		'h01 : begin
@@ -510,7 +511,7 @@ always @ (posedge clk_rw, negedge reset_x) begin
 								end
 								vreg_video_oe : begin
 									video_int_ext_x <= data_in[0];
-									// video_apa_on <= data_in[1]; // not (yet) implemented
+									video_apt_on <= data_in[1]; // not (yet) implemented
 									video_oe <= data_in[3];
 								end
 								default : begin

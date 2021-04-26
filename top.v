@@ -37,19 +37,9 @@ assign hsync_out = ~hsync_in;
 
 assign vsyncout = ~video_format[0];
 
-assign led1 = ~video_format[0];
-assign led2 = ~video_format[1];
-assign led3 = ~video_format[2];
-assign led4 = ~video_format[3];
-assign led5 = ~video_format[4];
-
-wire clk_pll;
-
-Clock_divider clkdiv(.clock_in(clk_in),.clock_out(clk_pll));
-
 heartbeat hb(
 	.clk_50mhz_in(clk_in),
-//	.heartbeat_out(led1)
+	.heartbeat_out(led1)
 );
 
 video_format_detector vf_det(
@@ -60,8 +50,7 @@ video_format_detector vf_det(
 	.video_format(video_format)
 );
 
-monitor_interface
- bkm68x_if(
+monitor_interface bkm68x_if(
 	.slot_x_int_x(~slot_x_int_x),
 	.clk_rw(~clk_rw),
 	.ax_d(~ax_d),
@@ -77,7 +66,6 @@ monitor_interface
 	.rgb_comp_x(rgb_comp_x),
 	.int_ext_x(int_ext_x),
 	.video_format(video_format),
-	.skip_init(back_button),
 	.clk_50mhz_in(clk_in)
 );
 	
