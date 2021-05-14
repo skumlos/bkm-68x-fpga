@@ -15,27 +15,25 @@ module top(
 	output video_oe_x,
 	output vsync_out,
 	output hsync_out,
-	output hsync_pll_out,
-	output vsyncout,
 	output led1,
 	output led2,
 	output led3,
 	output led4,
 	output led5,
-	input back_button,
+	input back_button1,
+	input back_button2,
 	input dip1,
 	input dip2,
 	input vsync_in,
 	input hsync_in,
-	input clk_in,
-	output clk_out);
+	input clk_in);
 
 wire [7:0] video_format;
 
 assign vsync_out = ~vsync_in;
 assign hsync_out = ~hsync_in;
 
-assign vsyncout = ~video_format[0];
+assign led2 = video_format[0];
 
 heartbeat hb(
 	.clk_50mhz_in(clk_in),
