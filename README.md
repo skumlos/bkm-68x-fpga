@@ -1,6 +1,8 @@
 BKM-68X FPGA
 
 This Verilog code tries to impersonate and work to some degree as to what most of the original BKM-68X does.
+It should be noted that I am not proficient in HDL at all. This is the first actual HDL I've written since university like 13 years ago...
+Improvements are welcome! At least there are no inferred latches...
 
 It basically consists of two modules: monitor_interface and video_format_detector.
 
