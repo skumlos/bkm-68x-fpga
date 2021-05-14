@@ -4,6 +4,8 @@ This Verilog code tries to impersonate and work to some degree as to what most o
 It should be noted that I am not proficient in HDL at all. This is the first actual HDL I've written since university like 13 years ago...
 Improvements are welcome! At least there are no inferred latches...
 
+This code does not do anything in regards to the aperture settings (or any other settings than internal/external sync, video output enable and then format detection).
+
 It basically consists of two modules: monitor_interface and video_format_detector.
 
 monitor_interface
