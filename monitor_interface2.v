@@ -88,6 +88,9 @@ reg [7:0] cmd_video		= 'h21;
 reg [7:0] cmd_prepare	= 'h22;
 reg [7:0] cmd_serial		= 'h23;
 
+reg [7:0] init_phase_1_threshold = 'hC;
+reg [7:0] init_phase_2_threshold = 'h13;
+
 reg [7:0] init_reg_40	= 'hFF;
 reg [7:0] init_reg_41	= 'hFD;
 reg [7:0] init_reg_42	= 'hFF;
@@ -171,6 +174,7 @@ initial begin
 	init_reg_41 <= 'hFD;
 	init_reg_42 <= 'hFF;
 	init_reg_43 <= 'hFD;
+
 	id_read <= 1'b0;
 	serial_reads <= 'h0;
 	strobe_irq_clr <= 'b0;
@@ -184,24 +188,32 @@ always @ (slot_no) begin
 			cmd_video	<= 'h21;
 			cmd_prepare	<= 'h22;
 			cmd_serial	<= 'h23;
+			init_phase_1_threshold <= 'hC;
+			init_phase_2_threshold <= 'h13;
 		end
 		'h03: begin
 			cmd_id		<= 'h30;
 			cmd_video	<= 'h31;
 			cmd_prepare	<= 'h32;
 			cmd_serial	<= 'h33;
+			init_phase_1_threshold <= 'hE;
+			init_phase_2_threshold <= 'h15;
 		end
 		'h04: begin
 			cmd_id		<= 'h40;
 			cmd_video	<= 'h41;
 			cmd_prepare	<= 'h42;
 			cmd_serial	<= 'h43;
+			init_phase_1_threshold <= 'h10;
+			init_phase_2_threshold <= 'h17;
 		end
 		default : begin // does this make sense?
 			cmd_id		<= 'h00;
 			cmd_video	<= 'h01;
 			cmd_prepare	<= 'h02;
 			cmd_serial	<= 'h03;
+			init_phase_1_threshold <= 'hC;
+			init_phase_2_threshold <= 'h13;
 		end
 	endcase
 end
@@ -246,13 +258,13 @@ always @ (posedge clk_50mhz_in) begin
 			end
 		end
 		'h01 : begin
-			if(id_read == 1'b1 && elapsed_s > 'hC) begin
+			if(id_read == 1'b1 && elapsed_s > init_phase_1_threshold) begin
 				init_reg_41 <= 'hFB;
 				init_phase <= 'h02;
 			end
 		end
 		'h02 : begin
-			if(init_reg_41 == 'hFF && elapsed_s > 'h13) begin
+			if(init_reg_41 == 'hFF && elapsed_s > init_phase_2_threshold) begin
 				init_reg_41 <= 'hEF;
 				init_phase <= 'h03;
 			end
