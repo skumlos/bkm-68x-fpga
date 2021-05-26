@@ -105,7 +105,7 @@ always @ (negedge vsync_filter,negedge reset_x) begin
 			end else if(hsync_cnt < 635) begin
 				reg_format = 'h03; // 576p50
 			end else if(hsync_cnt < 760) begin
-				reg_format = 'h12; // 720p50, unverified
+				reg_format = 'h12; // 720p50
 			end else begin
 				reg_format = 'h00; // sum-ting-wong
 			end
