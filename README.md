@@ -40,4 +40,11 @@ The 50MHz global clock is used to count the width of a vertical sync slice to de
 These two numbers combined specifies the video format, represented by a byte that the monitor understands as a specific format.
 This byte is picked up by the monitor_interface module, which then interrupts and tells the monitor of the current video signal.
 
+Other notable modules:
+
+polarity_detector
+
+As the monitor seemingly needs positive sync. To ensure signals that might vary, this module detects the sync polarity and reverses if needed.
+This module is instantiated both for VSYNC and HSYNC input signals.
+
 (2021) Martin Hejnfelt, martin@hejnfelt.com
