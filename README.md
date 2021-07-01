@@ -45,6 +45,9 @@ Other notable modules:
 polarity_detector
 
 As the monitor seemingly needs positive sync. To ensure signals that might vary, this module detects the sync polarity and reverses if needed.
+It simply counts the number of clock ticks in each state (high and low) of the sync signal, and if there are more ticks in the high that low, signal must be active low, and vice versa.
 This module is instantiated both for VSYNC and HSYNC input signals.
 
 (2021) Martin Hejnfelt, martin@hejnfelt.com
+
+This software is licensed under the GNU Public License 2 (GPL2), see LICENSE for more information.
