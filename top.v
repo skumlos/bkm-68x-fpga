@@ -1,3 +1,12 @@
+/* BKM-68X Alternative
+ *
+ * Version 1.0, see LICENSE
+ *
+ * See https://www.immerhax.com for more information
+ *
+ * (2021) Martin Hejnfelt (martin@hejnfelt.com)
+ */
+
 module top(	
 	input slot_x_int_x,
 	input clk_rw,
@@ -17,13 +26,8 @@ module top(
 	output hsync_out,
 	output led1,
 	output led2,
-	output led3,
-	output led4,
-	output led5,
 	input back_button1,
 	input back_button2,
-	input dip1,
-	input dip2,
 	input vsync_in,
 	input hsync_in,
 	input clk_in);
@@ -49,48 +53,37 @@ assign hsync_out = hsync_polarity ? hsync_in : ~hsync_in;
 wire vsync_in_x = vsync_polarity ? ~vsync_in : vsync_in;
 wire hsync_in_x = hsync_polarity ? ~hsync_in : hsync_in;
 
-wire int_video_oe_x;
 wire heartbeat_w;
 
-reg video_oe_x_forced = 1'b0;
+assign led1 = ((video_oe_x == 1'b0) ? 1'b0 : heartbeat_w);
+assign led2 = int_ext_x;
+
+/*
 wire back_button1_filtered;
-
-assign led1 = ~vsync_polarity;
-assign led2 = ~hsync_polarity;
-
-//assign led2 = ~video_oe_x_forced;
-assign video_oe_x = video_oe_x_forced ? 1'b0 : int_video_oe_x;
-
-always @ (negedge back_button1_filtered) begin
-	video_oe_x_forced = ~video_oe_x_forced;
-end
+wire back_button2_filtered;
 
 simplefilter button1_filter(
 	.clk_50mhz_in(clk_in),
 	.sig_in(back_button1),
 	.sig_out(back_button1_filtered)
 );
-
 defparam button1_filter.FILTER_LEN = 20000;
-
-wire int_int_ext_x;
-wire back_button2_filtered;
-reg int_ext_x_forced = 1'b1;
-
-//assign led1 = video_oe_x_forced ? 1'b0 : heartbeat_w;
-assign int_ext_x = video_oe_x_forced ? int_ext_x_forced : int_int_ext_x;
-
-always @ (negedge back_button2_filtered) begin
-	int_ext_x_forced = ~int_ext_x_forced;
-end
 
 simplefilter button2_filter(
 	.clk_50mhz_in(clk_in),
 	.sig_in(back_button2),
 	.sig_out(back_button2_filtered)
 );
-
 defparam button2_filter.FILTER_LEN = 20000;
+
+always @ (negedge back_button1_filtered) begin
+	// empty for now
+end
+
+always @ (negedge back_button2_filtered) begin
+	// empty for now
+end
+*/
 
 heartbeat hb(
 	.clk_50mhz_in(clk_in),
@@ -116,10 +109,10 @@ monitor_interface bkm68x_if(
 	.data_in_x(ad),
 	.data_out(ad_out),
 	.data_oe_x(ad_oe_x),
-	.video_oe_x(int_video_oe_x),
+	.video_oe_x(video_oe_x),
 	.hd_sd_x(hd_sd_x),
 	.rgb_comp_x(rgb_comp_x),
-	.int_ext_x(int_int_ext_x),
+	.int_ext_x(int_ext_x),
 	.video_format(video_format),
 	.clk_50mhz_in(clk_in)
 );

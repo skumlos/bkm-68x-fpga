@@ -1,3 +1,5 @@
+// Very crude 1Hz heartbeat
+
 module heartbeat(
 	input clk_50mhz_in,
 	output heartbeat_out

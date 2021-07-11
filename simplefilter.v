@@ -1,3 +1,5 @@
+// Very crude filter...
+
 module simplefilter (
 	input clk_50mhz_in,
 	input sig_in,

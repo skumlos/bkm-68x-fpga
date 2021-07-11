@@ -1,3 +1,9 @@
+/*
+ * BKM-68X Alternative Video Format Detector
+ * Uses HSYNC and VSYNC and the clock to determine the properties of the incoming video signal
+ * and represents this as the value the Sony BVM-A series understands...
+ */
+
 module video_format_detector(
 	input clk_50mhz_in,
 	input vsync_in,

@@ -1,3 +1,9 @@
+/*
+ * BKM-68X Alternative Monitor Interface
+ * Does the actual talking to the Sony BVM-A monitors.
+ * Based on logic analyzing of the original cards.
+ */
+
 module monitor_interface(
 	input slot_x_int_x,
 	input clk_rw,
