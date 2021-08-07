@@ -27,9 +27,9 @@ module monitor_interface(
 wire [7:0] data_in;
 assign data_in = ~data_in_x;
 
-reg data_oe = 'b0;
-reg irq_oe = 'b0;
-reg video_oe = 'b1;
+reg data_oe = 1'b0;
+reg irq_oe = 1'b0;
+reg video_oe = 1'b1;
 
 reg [7:0] slot_no = 'h00;
 
@@ -82,9 +82,9 @@ localparam [7:0]
 	cmd_irq		= 'h02,
 	cmd_init		= 'h10;
 
-reg video_rgb_ypbpr_x = 'b0;
-reg video_int_ext_x = 'b0;
-reg video_apt_on = 'b0;
+reg video_rgb_ypbpr_x = 1'b0;
+reg video_int_ext_x = 1'b0;
+reg video_apt_on = 1'b0;
 
 reg [2:0] p_state = prep_reg;
 reg [7:0] reg_prepare = 'h00;
@@ -137,7 +137,9 @@ assign apt_on = video_apt_on;
 assign int_x = !(init_reg_41 != 'hFF);
 assign video_oe_x = !(video_oe);
 assign rgb_comp_x = video_rgb_ypbpr_x;
+
 assign int_ext_x = ~video_int_ext_x;
+
 assign hd_sd_x = (reg_video_format == 'h00) ? 1'b1 : (reg_video_format < 'h03 ? 1'b0 : 1'b1);
 
 initial begin
@@ -225,8 +227,8 @@ always @ (slot_no) begin
 end
 
 reg [7:0] clear_irq = 'h00;
-reg strobe_irq_clr = 'b0;
-reg irq_cleared = 'b0;
+reg strobe_irq_clr = 1'b0;
+reg irq_cleared = 1'b0;
 
 reg [7:0] elapsed_s = 'h0;
 reg [31:0] clk_count = 'h00;
@@ -522,15 +524,15 @@ always @ (posedge clk_rw, negedge reset_x) begin
 							case(reg_video)
 								vreg_colorspc : begin
 									case(data_in)
-										video_rgb : video_rgb_ypbpr_x <= 'b1;
-										video_ypbpr : video_rgb_ypbpr_x <= 'b0;
-										default: video_rgb_ypbpr_x <= 'b1;
+										video_rgb : video_rgb_ypbpr_x = 'b1;
+										video_ypbpr : video_rgb_ypbpr_x = 'b0;
+										default: video_rgb_ypbpr_x = 'b1;
 									endcase
 								end
 								vreg_video_oe : begin
-									video_int_ext_x <= data_in[0];
-									video_apt_on <= data_in[1]; // not (yet) implemented
-									video_oe <= data_in[3];
+									video_int_ext_x = data_in[0];
+									video_apt_on = data_in[1]; // not (yet) implemented
+									video_oe = data_in[3];
 								end
 								default : begin
 									out_data <= data_in;

@@ -24,6 +24,7 @@ module top(
 	output video_oe_x,
 	output vsync_out,
 	output hsync_out,
+	output norm_y_g,
 	output led1,
 	output led2,
 	input back_button1,
@@ -33,19 +34,45 @@ module top(
 	input clk_in);
 
 wire [7:0] video_format;
+wire video_reset;
 
 wire vsync_polarity;
 wire hsync_polarity;
 
+wire signal_present;
+
+signal_detector sigdet(
+	.clk_50mhz_in(clk_in),
+	.hsync_in(hsync_in),
+	.signal_present_out(signal_present)
+);
+
+assign video_reset = ~signal_present;
+
 polarity_detector vsync_polarity_detector(
 	.clk_50mhz_in(clk_in),
 	.sync_in(vsync_in),
+	.reset(video_reset),
 	.positive_polarity_out(vsync_polarity));
 
 polarity_detector hsync_polarity_detector(
 	.clk_50mhz_in(clk_in),
 	.sync_in(hsync_in),
+	.reset(video_reset),
 	.positive_polarity_out(hsync_polarity));
+
+reg normalize_y_g = 1'b0;
+
+wire apt_on;
+
+always @ (video_format,rgb_comp_x,int_ext_x) begin
+	// If the video format is HD, aka 720p/1080i, tri-level sync seems to be the go-to sync
+	// method, which does not cause a DC offset, thus we do no need to "normalize" Y/G.
+	// For SoG, we *do* (normally) need to remove it, as it will usually be bi-level sync.
+	normalize_y_g = ~(rgb_comp_x == 1'b0 ? (video_format > 'h05) : (int_ext_x == 1'b1));
+end
+
+assign norm_y_g = normalize_y_g;
 
 assign vsync_out = vsync_polarity ? vsync_in : ~vsync_in;
 assign hsync_out = hsync_polarity ? hsync_in : ~hsync_in;
@@ -60,25 +87,27 @@ assign led2 = int_ext_x;
 
 /*
 wire back_button1_filtered;
-wire back_button2_filtered;
 
 simplefilter button1_filter(
 	.clk_50mhz_in(clk_in),
 	.sig_in(back_button1),
 	.sig_out(back_button1_filtered)
 );
-defparam button1_filter.FILTER_LEN = 20000;
+defparam button1_filter.FILTER_LEN = 200000;
+always @ (negedge back_button1_filtered) begin
+	// empty for now
+end
+*/
+
+/*
+wire back_button2_filtered;
 
 simplefilter button2_filter(
 	.clk_50mhz_in(clk_in),
 	.sig_in(back_button2),
 	.sig_out(back_button2_filtered)
 );
-defparam button2_filter.FILTER_LEN = 20000;
-
-always @ (negedge back_button1_filtered) begin
-	// empty for now
-end
+defparam button2_filter.FILTER_LEN = 200000;
 
 always @ (negedge back_button2_filtered) begin
 	// empty for now
@@ -94,7 +123,6 @@ video_format_detector vf_det(
 	.clk_50mhz_in(clk_in),
 	.vsync_in(vsync_in_x),
 	.hsync_in(hsync_in_x),
-	.sample_out(hsync_pll_out),
 	.video_format(video_format)
 );
 
@@ -104,6 +132,7 @@ monitor_interface bkm68x_if(
 	.ax_d(~ax_d),
 	.r_wx(~r_wx),
 	.reset_x(~reset_x),
+	.apt_on(apt_on),
 	.int_x(irq_x),
 	.int_oe_x(irq_oe_x),
 	.data_in_x(ad),

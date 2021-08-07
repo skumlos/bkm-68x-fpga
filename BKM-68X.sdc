@@ -3,7 +3,6 @@ create_clock -period 20 [get_ports clk_rw]
 
 # Constrain clock port clk_in with a 10-ns (100MHz) requirement
 create_clock -period 10 [get_ports clk_in]
-create_clock -period 10 [get_ports clk_out]
 
 create_clock -period 1000 [get_ports vsync_in]
 create_clock -period 400 [get_ports hsync_in]

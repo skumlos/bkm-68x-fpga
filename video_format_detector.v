@@ -8,7 +8,6 @@ module video_format_detector(
 	input clk_50mhz_in,
 	input vsync_in,
 	input hsync_in,
-	output sample_out,
 	output [7:0] video_format);
 
 wire clk;
@@ -46,7 +45,6 @@ wire vsync_count_clk = clk & vsync_filter;
 wire hsync_count_clk = hsync_filter & vsync_filter;
 
 assign video_format = reg_format;
-assign sample_out = reset_x;
 
 initial begin
 	clk_count = 'h0;
