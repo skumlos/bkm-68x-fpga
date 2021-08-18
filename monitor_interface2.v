@@ -531,7 +531,7 @@ always @ (posedge clk_rw, negedge reset_x) begin
 								end
 								vreg_video_oe : begin
 									video_int_ext_x = data_in[0];
-									video_apt_on = data_in[1]; // not (yet) implemented
+									video_apt_on = data_in[2]; // Aperture is not implemented
 									video_oe = data_in[3];
 								end
 								default : begin
