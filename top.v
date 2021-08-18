@@ -82,7 +82,7 @@ wire hsync_in_x = hsync_polarity ? ~hsync_in : hsync_in;
 
 wire heartbeat_w;
 
-assign led1 = ((video_oe_x == 1'b0) ? 1'b0 : heartbeat_w);
+assign led1 = ((video_oe_x == 1'b0) ? heartbeat_w : 1'b0);
 assign led2 = int_ext_x;
 
 wire int_ext_x_;
