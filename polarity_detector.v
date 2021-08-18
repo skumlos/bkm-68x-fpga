@@ -39,12 +39,12 @@ always@(negedge clk_50mhz_in) begin
 				cnt_neg <= cnt_neg + 'd1;
 			end
 			2'b10: begin // sync changed 1 -> 0
-				neg_sync_edges <= neg_sync_edges + 'd1;
+				neg_sync_edges <= neg_sync_edges + 8'd1;
 				cnt_pos_buf <= cnt_pos;
 				cnt_neg <= 0;
 			end
 			2'b01: begin // sync changed 0 -> 1
-				pos_sync_edges <= pos_sync_edges + 'd1;
+				pos_sync_edges <= pos_sync_edges + 8'd1;
 				cnt_neg_buf <= cnt_neg;
 				cnt_pos <= 0;
 			end
