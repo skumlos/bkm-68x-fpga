@@ -85,6 +85,11 @@ wire heartbeat_w;
 assign led1 = ((video_oe_x == 1'b0) ? 1'b0 : heartbeat_w);
 assign led2 = int_ext_x;
 
+wire int_ext_x_;
+
+// Invert int_ext_x (so its really int_x_ext) as this fits the BKM-68X Alternative board
+assign int_ext_x = ~int_ext_x_;
+
 /*
 wire back_button1_filtered;
 
@@ -141,7 +146,7 @@ monitor_interface bkm68x_if(
 	.video_oe_x(video_oe_x),
 	.hd_sd_x(hd_sd_x),
 	.rgb_comp_x(rgb_comp_x),
-	.int_ext_x(int_ext_x),
+	.int_ext_x(int_ext_x_),
 	.video_format(video_format),
 	.clk_50mhz_in(clk_in)
 );
