@@ -1,6 +1,7 @@
 /*
  * BKM-68X Alternative Sync Polarity Detector
  * Determines the polarity of the sync, by counting the clock slices in low and high state.
+ * TODO: Rewrite this to use some sort of a moving average or smth...
  */
  
 module polarity_detector(
