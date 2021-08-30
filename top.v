@@ -74,8 +74,9 @@ end
 
 assign norm_y_g = normalize_y_g;
 
-assign vsync_out = vsync_polarity ? vsync_in : ~vsync_in;
-assign hsync_out = hsync_polarity ? hsync_in : ~hsync_in;
+// internal sync is always negative polarity, so no reason to take polarity detection into consideration
+assign vsync_out = int_ext_x ? ~vsync_in : (vsync_polarity ? vsync_in : ~vsync_in);
+assign hsync_out = int_ext_x ? ~hsync_in : (hsync_polarity ? hsync_in : ~hsync_in);
 
 wire vsync_in_x = vsync_polarity ? ~vsync_in : vsync_in;
 wire hsync_in_x = hsync_polarity ? ~hsync_in : hsync_in;
