@@ -69,7 +69,7 @@ always @ (video_format,rgb_comp_x,int_ext_x,apt_on) begin
 	// If the video format is HD, aka 720p/1080i, tri-level sync seems to be the go-to sync
 	// method, which does not cause a DC offset, thus we do no need to "normalize" Y/G.
 	// For SoG, we *do* (normally) need to remove it, as it will usually be bi-level sync.
-	normalize_y_g = (rgb_comp_x == 1'b0 ? ((video_format > 'h05) & !apt_on) : ((int_ext_x == 1'b1) & !apt_on));
+	normalize_y_g = (rgb_comp_x == 1'b0 ? (((video_format > 'h05) & !apt_on) || apt_on) : (((int_ext_x == 1'b1) & !apt_on)) || apt_on);
 end
 
 assign norm_y_g = normalize_y_g;
