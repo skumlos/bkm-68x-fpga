@@ -14,7 +14,7 @@ wire clk;
 
 Clock_divider clk25mhz(
 	.clock_in(clk_50mhz_in),
-	.clock_out(clk),
+	.clock_out(clk)
 );
 
 wire vsync_filter;
