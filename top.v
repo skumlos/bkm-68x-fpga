@@ -35,35 +35,51 @@ module top(
 
 wire [7:0] video_format;
 wire video_reset;
-
 wire vsync_polarity;
 wire hsync_polarity;
-
 wire signal_present;
+wire vsync_in_buf;
+wire hsync_in_buf;
+wire apt_on;
+wire int_ext_x_;
+wire vsync_in_x;
+wire hsync_in_x;
 
-signal_detector sigdet(
-	.clk_50mhz_in(clk_in),
-	.hsync_in(hsync_in),
-	.signal_present_out(signal_present)
-);
+reg normalize_y_g = 1'b0;
 
 assign video_reset = ~signal_present;
 
+assign norm_y_g = normalize_y_g;
+
+// Invert int_ext_x (so its really int_x_ext) as this fits the BKM-68X Alternative board
+assign int_ext_x = ~int_ext_x_;
+
+assign vsync_in_buf = vsync_in;
+assign hsync_in_buf = hsync_in;
+
+// internal sync is always negative polarity, so no reason to take polarity detection into consideration
+assign vsync_out = int_ext_x_ ? ~vsync_in_buf : (vsync_polarity ? vsync_in_buf : ~vsync_in_buf);
+assign hsync_out = int_ext_x_ ? ~hsync_in_buf : (hsync_polarity ? hsync_in_buf : ~hsync_in_buf);
+assign vsync_in_x = int_ext_x_ ? vsync_in_buf : (vsync_polarity ? ~vsync_in_buf : vsync_in_buf);
+assign hsync_in_x = int_ext_x_ ? hsync_in_buf : (hsync_polarity ? ~hsync_in_buf : hsync_in_buf);
+
+signal_detector sigdet(
+	.clk_50mhz_in(clk_in),
+	.hsync_in(hsync_in_buf),
+	.signal_present_out(signal_present)
+);
+
 polarity_detector vsync_polarity_detector(
 	.clk_50mhz_in(clk_in),
-	.sync_in(vsync_in),
+	.sync_in(vsync_in_buf),
 	.reset(video_reset),
 	.positive_polarity_out(vsync_polarity));
 
 polarity_detector hsync_polarity_detector(
 	.clk_50mhz_in(clk_in),
-	.sync_in(hsync_in),
+	.sync_in(hsync_in_buf),
 	.reset(video_reset),
 	.positive_polarity_out(hsync_polarity));
-
-reg normalize_y_g = 1'b0;
-
-wire apt_on;
 
 always @ (video_format,rgb_comp_x,int_ext_x,apt_on) begin
 	// If the video format is HD, aka 720p/1080i, tri-level sync seems to be the go-to sync
@@ -72,24 +88,12 @@ always @ (video_format,rgb_comp_x,int_ext_x,apt_on) begin
 	normalize_y_g = (rgb_comp_x == 1'b0 ? (((video_format > 'h05) & !apt_on) || apt_on) : (((int_ext_x == 1'b1) & !apt_on)) || apt_on);
 end
 
-assign norm_y_g = normalize_y_g;
-
-// internal sync is always negative polarity, so no reason to take polarity detection into consideration
-assign vsync_out = int_ext_x ? ~vsync_in : (vsync_polarity ? vsync_in : ~vsync_in);
-assign hsync_out = int_ext_x ? ~hsync_in : (hsync_polarity ? hsync_in : ~hsync_in);
-
-wire vsync_in_x = vsync_polarity ? ~vsync_in : vsync_in;
-wire hsync_in_x = hsync_polarity ? ~hsync_in : hsync_in;
-
 wire heartbeat_w;
 
 assign led1 = ((video_oe_x == 1'b0) ? heartbeat_w : 1'b0);
-assign led2 = int_ext_x;
-
-wire int_ext_x_;
-
-// Invert int_ext_x (so its really int_x_ext) as this fits the BKM-68X Alternative board
-assign int_ext_x = ~int_ext_x_;
+assign led2 = normalize_y_g;
+//assign led1 = ~hsync_polarity;
+//assign led2 = ~vsync_polarity;
 
 /*
 wire back_button1_filtered;
@@ -99,7 +103,8 @@ simplefilter button1_filter(
 	.sig_in(back_button1),
 	.sig_out(back_button1_filtered)
 );
-defparam button1_filter.FILTER_LEN = 200000;
+defparam button1_filter.FILTER_LEN = 500000;
+
 always @ (negedge back_button1_filtered) begin
 	// empty for now
 end
@@ -113,7 +118,7 @@ simplefilter button2_filter(
 	.sig_in(back_button2),
 	.sig_out(back_button2_filtered)
 );
-defparam button2_filter.FILTER_LEN = 200000;
+defparam button2_filter.FILTER_LEN = 500000;
 
 always @ (negedge back_button2_filtered) begin
 	// empty for now

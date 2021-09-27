@@ -9,6 +9,12 @@ create_clock -period 400 [get_ports hsync_in]
 #create_clock -name {video_format_detector:vf_det|sample} -period 10.000
 #create_clock -period 10 {video_format_detector:vf_det|reset}
 #create_clock -period 10 {video_format_detector:vf_det|vsync_count_clk}
+create_clock -period 10 {polarity_detector:hsync_polarity_detector|cnt_clk_x}
+create_clock -period 10 {polarity_detector:vsync_polarity_detector|cnt_clk_x}
+create_clock -period 1000 {polarity_detector:vsync_polarity_detector|Clock_divider:clkdiv|clock_out}
+create_clock -period 1000 {polarity_detector:hsync_polarity_detector|Clock_divider:clkdiv|clock_out}
+
+create_clock -period 20 {video_format_detector:vf_det|Clock_divider:clk25mhz|clock_out}
 
 # Automatically apply a generate clock on the output of phase-locked loops (PLLs)
 # This command can be safely left in the SDC even if no PLLs exist in the design
