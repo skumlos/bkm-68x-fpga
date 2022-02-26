@@ -31,6 +31,7 @@ module top(
 	input back_button2,
 	input vsync_in,
 	input hsync_in,
+    input vsync_discrete_in,
 	input clk_in);
 
 wire [7:0] video_format;
@@ -38,12 +39,37 @@ wire video_reset;
 wire vsync_polarity;
 wire hsync_polarity;
 wire signal_present;
+wire vsync_discrete_in_filtered;
+wire discrete_vsync_present;
 wire vsync_in_buf;
 wire hsync_in_buf;
 wire apt_on;
 wire int_ext_x_;
 wire vsync_in_x;
 wire hsync_in_x;
+
+wire clk_1mhz;
+
+Clock_divider clkdiv1(
+	.clock_in(clk_in),
+	.clock_out(clk_1mhz)
+);
+defparam clkdiv1.DIVISOR=50;
+
+// Add a filter to avoid noise accidentally causing erroneous detection
+// of a discrete vsync signal
+glitch_filter vsync_discrete_noise_filter(
+	.clk(clk_1mhz),
+	.in(vsync_discrete_in),
+	.out(vsync_discrete_in_filtered));
+
+defparam vsync_discrete_noise_filter.FILTER_LEN = 5;
+
+signal_detector discrete_vsync_det(
+	.clk_50mhz_in(clk_in),
+	.hsync_in(vsync_discrete_in_filtered),
+	.signal_present_out(discrete_vsync_present)
+);
 
 reg normalize_y_g = 1'b0;
 
@@ -54,7 +80,8 @@ assign norm_y_g = normalize_y_g;
 // Invert int_ext_x (so its really int_x_ext) as this fits the BKM-68X Alternative board
 assign int_ext_x = ~int_ext_x_;
 
-assign vsync_in_buf = vsync_in;
+assign vsync_in_buf = discrete_vsync_present ? vsync_discrete_in : vsync_in;
+//assign vsync_in_buf = vsync_in;
 assign hsync_in_buf = hsync_in;
 
 // internal sync is always negative polarity, so no reason to take polarity detection into consideration
@@ -62,7 +89,7 @@ assign vsync_out = int_ext_x_ ? ~vsync_in_buf : (vsync_polarity ? vsync_in_buf :
 assign hsync_out = int_ext_x_ ? ~hsync_in_buf : (hsync_polarity ? hsync_in_buf : ~hsync_in_buf);
 assign vsync_in_x = int_ext_x_ ? vsync_in_buf : (vsync_polarity ? ~vsync_in_buf : vsync_in_buf);
 assign hsync_in_x = int_ext_x_ ? hsync_in_buf : (hsync_polarity ? ~hsync_in_buf : hsync_in_buf);
-
+ 
 signal_detector sigdet(
 	.clk_50mhz_in(clk_in),
 	.hsync_in(hsync_in_buf),
@@ -90,8 +117,8 @@ end
 
 wire heartbeat_w;
 
-assign led1 = ((video_oe_x == 1'b0) ? heartbeat_w : 1'b0);
-assign led2 = normalize_y_g;
+assign led1 = !signal_present ? heartbeat_w : 1'b0;
+assign led2 = discrete_vsync_present;
 //assign led1 = ~hsync_polarity;
 //assign led2 = ~vsync_polarity;
 
