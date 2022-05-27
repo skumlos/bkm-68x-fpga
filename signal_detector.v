@@ -10,7 +10,7 @@ reg last_hsync_in = 1'b1;
 
 assign signal_present_out = signal_present;
 
-parameter signal_present_threshold = 10000000;
+parameter signal_present_threshold = 15000000;
 
 always @ (posedge clk_50mhz_in) begin
 	if(hsync_in != last_hsync_in) begin
@@ -19,6 +19,7 @@ always @ (posedge clk_50mhz_in) begin
 	end else begin
 		keepalive <= keepalive + 1'b1;
 		if(keepalive >= signal_present_threshold) begin
+			keepalive <= signal_present_threshold;
 			signal_present <= 1'b0;
 		end else begin
 			signal_present <= 1'b1;
