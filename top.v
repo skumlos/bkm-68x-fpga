@@ -1,6 +1,6 @@
  /* BKM-68X Alternative
  *
- * Version 1.2, see LICENSE
+ * Version 1.3, see LICENSE
  *
  * See https://www.immerhax.com for more information
  *
